@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 )
 
@@ -24,13 +25,141 @@ func init() {
 // main
 //+++++++++++++++++++++++++++++++++++++++
 
+type Pair struct {
+	first, second int
+}
+
+type PairSet struct {
+	data []Pair
+}
+
+func (ps *PairSet) Insert(p Pair) {
+	ps.data = append(ps.data, p)
+	sort.Slice(ps.data, func(i, j int) bool {
+		if ps.data[i].first == ps.data[j].first {
+			return ps.data[i].second < ps.data[j].second
+		}
+		return ps.data[i].first < ps.data[j].first
+	})
+}
+
+func (ps *PairSet) Erase(index int) {
+	ps.data = append(ps.data[:index], ps.data[index+1:]...)
+}
+
+func (ps *PairSet) LowerBound(x int) int {
+	low, high := 0, len(ps.data)
+	for low < high {
+		mid := (low + high) / 2
+		if ps.data[mid].first > x {
+			high = mid
+		} else {
+			low = mid + 1
+		}
+	}
+	return low
+}
+
 func main() {
 	defer func() { wr.Flush() }()
 
-	//ここに処理を書く
-	n := in()
-	out(n)
+	N, Q := in2()
 
+	color := make([]int, N)
+	count := make([]int, N)
+	for i := 0; i < N; i++ {
+		color[i] = i
+		count[i] = 1
+	}
+
+	uf := newUnionFind(N)
+	for i := 0; i < Q; i++ {
+		q := in()
+
+		if q == 1 {
+			x := in() - 1
+			c := in() - 1
+			x = uf.find(x)
+
+			count[color[x]] -= uf.size(x)
+			color[x] = c
+			count[color[x]] += uf.size(x)
+
+			// 左の色と同じならマージ
+			li := uf.l[x] - 1
+			if li >= 0 {
+				li = uf.find(li)
+				if color[li] == c {
+					uf.unite(x, li)
+				}
+			}
+
+			// 右の色と同じならマージ
+			ri := uf.r[x] + 1
+			if ri < N {
+				ri = uf.find(ri)
+				if color[ri] == c {
+					uf.unite(x, ri)
+				}
+			}
+
+			continue
+		}
+
+		c := in() - 1
+		out(count[c])
+	}
+
+}
+
+type UnionFind struct {
+	n    int // 要素数
+	root []int
+	l, r []int
+}
+
+func newUnionFind(n int) *UnionFind {
+	root, l, r := make([]int, n), make([]int, n), make([]int, n)
+	for i := 0; i < n; i++ {
+		root[i] = -1
+		l[i] = i
+		r[i] = i
+	}
+	uf := &UnionFind{n: n, root: root, l: l, r: r}
+	return uf
+}
+
+func (uf *UnionFind) find(x int) int {
+	if uf.root[x] < 0 {
+		return x
+	}
+	uf.root[x] = uf.find(uf.root[x])
+	return uf.root[x]
+}
+
+func (uf *UnionFind) unite(x, y int) {
+	x = uf.find(x)
+	y = uf.find(y)
+	if x == y {
+		return
+	}
+	if uf.size(x) < uf.size(y) {
+		x, y = y, x
+	}
+	// 要素の大きい方へマージ
+	uf.l[x] = min(uf.l[x], uf.l[y])
+	uf.r[x] = max(uf.r[x], uf.r[y])
+
+	uf.root[x] += uf.root[y]
+	uf.root[y] = x
+}
+
+func (uf *UnionFind) isSame(x, y int) bool {
+	return uf.find(x) == uf.find(y)
+}
+
+func (uf *UnionFind) size(x int) int {
+	return -uf.root[uf.find(x)]
 }
 
 //+++++++++++++++++++++++++++++++++++++++
@@ -153,4 +282,3 @@ func abs(a int) int {
 	}
 	return -a
 }
-
