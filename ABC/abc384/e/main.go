@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"math"
 	"os"
@@ -41,55 +42,46 @@ func main() {
 		}
 	}
 
-	current := S[P][Q]
-	queue := make([][2]int, 0)
-	queue = append(queue, [2]int{P, Q})
-
-	slime := make(map[[2]int]bool)
-	slime[[2]int{P, Q}] = true
-
-	edgeQueue := make([][2]int, 0)
-	edgeQueue = append(edgeQueue, [2]int{P, Q})
+	pq := make(PriorityQueue, 0)
+	heap.Init(&pq)
 
 	dir := [4][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
-	for len(queue) > 0 {
-		p := queue[0]
-		queue = queue[1:]
-
-		success := false
-
-		for _, d := range dir {
-			np := [2]int{p[0] + d[0], p[1] + d[1]}
-			if np[0] < 0 || np[0] >= H || np[1] < 0 || np[1] >= W {
-				continue
-			}
-			if slime[np] {
-				continue
-			}
-			if float64(S[np[0]][np[1]]) < float64(current)/float64(X) {
-				current += S[np[0]][np[1]]
-				slime[np] = true
-				edgeQueue = append(edgeQueue, np)
-				success = true
-				queue = append(queue, np)
-			}
+	for _, d := range dir {
+		np := [2]int{P + d[0], Q + d[1]}
+		if np[0] < 0 || np[0] >= H || np[1] < 0 || np[1] >= W {
+			continue
 		}
+		heap.Push(&pq, pqi{val: np, priority: S[np[0]][np[1]]})
+	}
 
-		if success {
-			for i := 0; i < len(edgeQueue); i++ {
-				k := edgeQueue[i]
-				// 上下左右がマージ済みならedgeQueueから削除する
-				if slime[[2]int{k[0] - 1, k[1]}] && slime[[2]int{k[0] + 1, k[1]}] && slime[[2]int{k[0], k[1] - 1}] && slime[[2]int{k[0], k[1] + 1}] {
-					edgeQueue = append(edgeQueue[:i], edgeQueue[i+1:]...)
-					i--
+	merged := make(map[[2]int]bool)
+	merged[[2]int{P, Q}] = true
+
+	ans := S[P][Q]
+	for pq.Len() > 0 {
+		item := heap.Pop(&pq).(pqi)
+		if merged[item.val] {
+			continue
+		}
+		if float64(item.priority) < float64(ans)/float64(X) {
+			ans += item.priority
+			merged[item.val] = true
+			for _, d := range dir {
+				np := [2]int{item.val[0] + d[0], item.val[1] + d[1]}
+				if np[0] < 0 || np[0] >= H || np[1] < 0 || np[1] >= W {
 					continue
 				}
-				queue = append(queue, k)
+				if merged[np] {
+					continue
+				}
+				heap.Push(&pq, pqi{val: np, priority: S[np[0]][np[1]]})
 			}
+		} else {
+			break
 		}
 	}
 
-	out(current)
+	out(ans)
 }
 
 //+++++++++++++++++++++++++++++++++++++++
@@ -261,4 +253,38 @@ func (uf *UnionFind) isSame(x, y int) bool {
 
 func (uf *UnionFind) size(x int) int {
 	return -uf.root[uf.find(x)]
+}
+
+//+++++++++++++++++++++++++++++++++++++++
+// PriorityQueue
+//+++++++++++++++++++++++++++++++++++++++
+
+type pqi struct {
+	val      [2]int
+	priority int // The priority of the item in the queue.
+}
+
+type PriorityQueue []pqi
+
+func (pq PriorityQueue) Len() int { return len(pq) }
+
+func (pq PriorityQueue) Less(i, j int) bool {
+	// default: ascending order
+	return pq[i].priority < pq[j].priority
+}
+
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+}
+
+func (pq *PriorityQueue) Push(x any) {
+	*pq = append(*pq, x.(pqi))
+}
+
+func (pq *PriorityQueue) Pop() any {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	*pq = old[0 : n-1]
+	return item
 }
