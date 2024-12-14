@@ -32,21 +32,32 @@ func main() {
 	for i := 0; i < N; i++ {
 		A[i] = in()
 	}
-
-	if S < 3 {
-		out("No")
-		return
-	}
+	A = append(A, A...)
 
 	// 部分列の和がSになるものが存在するか
-	loopSum := 0
-	for i := 0; i < N; i++ {
-		loopSum += A[i]
+	prefixSum := make([]int, N*2+1)
+	for i := 0; i < N*2; i++ {
+		prefixSum[i+1] = prefixSum[i] + A[i]
 	}
 
-	// out("Yes")
-	// out("No")
+	// fmt.Println(prefixSum)
+	if S%prefixSum[N] == 0 {
+		out("Yes")
+		return
+	}
+	S = S % prefixSum[N]
+	// fmt.Println(S)
 
+	m := make(map[int]int)
+	for i := 0; i < N*2+1; i++ {
+		m[prefixSum[i]+S] = 1
+		if _, ok := m[prefixSum[i]]; ok {
+			out("Yes")
+			return
+		}
+	}
+
+	out("No")
 }
 
 //+++++++++++++++++++++++++++++++++++++++
