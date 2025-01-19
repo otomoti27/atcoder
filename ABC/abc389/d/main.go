@@ -28,65 +28,36 @@ func main() {
 	defer func() { wr.Flush() }()
 
 	r := in()
-	// 半径rの円に含まれるブロックの数
-	// 距離がr未満のブロックの数
 
-	// 1. 1つのブロックの中心が原点にある
-	// 2. ブロックの頂点が全て距離r未満である
+	// x=0, y=0の正方形の数
+	ans := 4*(r-1) + 1
+	sum := 0
 
-	grid := make([][]int, r)
-	for i := 0; i < len(grid); i++ {
-		grid[i] = make([]int, r)
-	}
-	visited := make([][]bool, r)
-	for i := 0; i < len(visited); i++ {
-		visited[i] = make([]bool, r)
-	}
-
-	points := [][]float64{{0.5, 0.5}, {0.5, -0.5}, {-0.5, 0.5}, {-0.5, -0.5}}
-	// 1/4の領域について考える
-	for x := 0; x <= len(grid); x++ {
-		for y := 0; y <= len(grid); y++ {
-			// 4つの頂点のうち、全てがr未満であれば、そのブロックはr未満
-			check := true
-			for _, p := range points {
-				x1 := math.Abs(float64(x) - p[0])
-				y1 := math.Abs(float64(y) - p[1])
-				if math.Pow(x1, 2)+math.Pow(y1, 2) >= math.Pow(float64(r), 2) {
-					check = false
-					break
-				}
-			}
-
-			if check {
-				grid[x][y] = 1
+	for x := 1; x <= r; x++ {
+		// 二分探索
+		ly, ry := 0, r
+		for abs(ly-ry) != 1 {
+			wj := (ly + ry) / 2
+			if calc(x, wj, r) {
+				ly = wj
+			} else {
+				ry = wj
 			}
 		}
+
+		// x=j 上で距離r以内のyの数
+		sum += ly
 	}
 
-	xZeroCount := 0
-	yZeroCount := 0
-	count := 0
-	for x := 0; x < len(grid); x++ {
-		for y := 0; y < len(grid); y++ {
-			process := false
-			if x == 0 && grid[x][y] == 1 {
-				xZeroCount++
-				process = true
-			}
-			if y == 0 && grid[x][y] == 1 {
-				yZeroCount++
-				process = true
-			}
-			if !process && grid[x][y] == 1 {
-				count++
-			}
-		}
-	}
+	ans += sum * 4
 
-	// fmt.Printf("xZeroCount: %d, yZeroCount: %d, count: %d\n", xZeroCount, yZeroCount, count)
-	ans := 4*count + 2*(xZeroCount-1) + 2*(yZeroCount-1) + 1
 	out(ans)
+}
+
+func calc(x, y, r int) bool {
+	x = 2*x + 1
+	y = 2*y + 1
+	return x*x+y*y <= 4*r*r
 }
 
 //+++++++++++++++++++++++++++++++++++++++
